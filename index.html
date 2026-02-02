@@ -2,55 +2,61 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Taxi Map</title>
 
-  <!-- Telegram WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- Leaflet -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Routing -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
-    #map {
-      height: 100vh;
-      width: 100%;
-    }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    #map { height: 100vh; width: 100%; }
+    
     .top-box {
       position: absolute;
-      top: 10px;
+      top: 15px;
       left: 10px;
+      right: 10px; /* Makes it span across mobile screens nicely */
       background: white;
+      padding: 12px;
+      border-radius: 12px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: center;
+    }
+
+    #info-text {
+      font-size: 14px;
+      color: #333;
+      font-weight: bold;
+    }
+
+    button {
+      background-color: #0088cc; /* Telegram Blue */
+      color: white;
+      border: none;
       padding: 10px;
       border-radius: 8px;
-      z-index: 1000;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-    button {
-      padding: 8px 12px;
       font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
     }
+    
+    button:active { opacity: 0.8; }
   </style>
 </head>
-
 <body>
 
-  <div class="top-box" id="info">
+  <div class="top-box">
+    <div id="info">Ready to find your route</div>
     <button onclick="getLocation()">📍 Get My Location</button>
   </div>
 
