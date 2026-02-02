@@ -1,5 +1,6 @@
 const tg = window.Telegram.WebApp;
 tg.ready();
+tg.expand(); // Good practice to expand the app for maps
 
 // Fixed station location
 const STATION = {
@@ -19,60 +20,72 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 // Station marker
 L.marker([STATION.lat, STATION.lng])
   .addTo(map)
-  .bindPopup(<b>${STATION.name}</b>)
+  .bindPopup(`<b>${STATION.name}</b>`)
   .openPopup();
 
 let routingControl;
 
-// Get user location (USER-INITIATED ✅)
 function getLocation() {
-  document.getElementById("info").innerText = "Locating you…";
+  const infoBox = document.getElementById("info");
+  infoBox.innerHTML = "<span>Searching... 🛰️</span>";
 
+  // Use the browser Geolocation API
   navigator.geolocation.getCurrentPosition(
-    position => {
+    (position) => {
       const userLat = position.coords.latitude;
       const userLng = position.coords.longitude;
 
-      // User marker
+      // Add user marker
       L.marker([userLat, userLng])
         .addTo(map)
         .bindPopup("You are here")
         .openPopup();
 
-      // Remove old route if exists
+      // Clear existing route
       if (routingControl) {
         map.removeControl(routingControl);
       }
 
-      // Route
+      // Create new route using secure HTTPS server
       routingControl = L.Routing.control({
         waypoints: [
           L.latLng(userLat, userLng),
           L.latLng(STATION.lat, STATION.lng)
         ],
+        router: L.Routing.osrmv1({
+          serviceUrl: 'https://router.project-osrm.org/route/v1' // Force HTTPS
+        }),
         routeWhileDragging: false,
         addWaypoints: false,
-        draggableWaypoints: false,
         show: false
       })
-      .on("routesfound", e => {
-        const distanceKm =
-          (e.routes[0].summary.totalDistance / 1000).toFixed(2);
-
-        document.getElementById("info").innerText =
-          Distance to station: ${distanceKm} km;
+      .on("routesfound", (e) => {
+        const distanceKm = (e.routes[0].summary.totalDistance / 1000).toFixed(2);
+        infoBox.innerHTML = `<b>Distance:</b> ${distanceKm} km`;
+      })
+      .on("routingerror", () => {
+        infoBox.innerHTML = "❌ Route calculation failed";
       })
       .addTo(map);
 
+      // Zoom map to show both points
       map.fitBounds([
         [userLat, userLng],
         [STATION.lat, STATION.lng]
-      ]);
+      ], { padding: [50, 50] });
     },
-    error => {
-      document.getElementById("info").innerText =
-        "❌ Location permission denied";
+    (error) => {
+      // Handle location errors
+      console.error(error);
+      if (error.code === 1) {
+        infoBox.innerHTML = "❌ Please allow location access";
+      } else {
+        infoBox.innerHTML = "❌ Location unavailable";
+      }
     },
-    { enableHighAccuracy: true }
+    { 
+        enableHighAccuracy: true,
+        timeout: 10000 
+    }
   );
 }
