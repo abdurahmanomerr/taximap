@@ -1,17 +1,17 @@
 const tg = window.Telegram.WebApp;
 tg.ready();
 
-// Station location (FIXED)
+// Fixed station location
 const STATION = {
-  name: "Station",
+  name: "Taxi Station",
   lat: 9.059406,
   lng: 38.737413
 };
 
-// Init map (temporary center)
-const map = L.map("map").setView([STATION.lat, STATION.lng], 13);
+// Init map
+const map = L.map("map").setView([STATION.lat, STATION.lng], 14);
 
-// Tiles
+// Map tiles
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap"
 }).addTo(map);
@@ -19,49 +19,60 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 // Station marker
 L.marker([STATION.lat, STATION.lng])
   .addTo(map)
-  .bindPopup(<b>${STATION.name}</b>);
+  .bindPopup(<b>${STATION.name}</b>)
+  .openPopup();
 
-// Get user location
-navigator.geolocation.getCurrentPosition(
-  position => {
-    const userLat = position.coords.latitude;
-    const userLng = position.coords.longitude;
+let routingControl;
 
-    // User marker
-    L.marker([userLat, userLng])
-      .addTo(map)
-      .bindPopup("You are here")
-      .openPopup();
+// Get user location (USER-INITIATED ✅)
+function getLocation() {
+  document.getElementById("info").innerText = "Locating you…";
 
-    // Routing
-    L.Routing.control({
-      waypoints: [
-        L.latLng(userLat, userLng),
-        L.latLng(STATION.lat, STATION.lng)
-      ],
-      routeWhileDragging: false,
-      addWaypoints: false,
-      draggableWaypoints: false,
-      show: false
-    })
-    .on("routesfound", function (e) {
-      const route = e.routes[0];
-      const distanceKm = (route.summary.totalDistance / 1000).toFixed(2);
-      document.getElementById("distance").innerText =
-        Distance to station: ${distanceKm} km;
-    })
-    .addTo(map);
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const userLat = position.coords.latitude;
+      const userLng = position.coords.longitude;
 
-    map.fitBounds([
-      [userLat, userLng],
-      [STATION.lat, STATION.lng]
-    ]);
-  },
-  error => {
-    document.getElementById("distance").innerText =
-      "Location access denied";
-  },
-  {
-    enableHighAccuracy: true
-  }
-);
+      // User marker
+      L.marker([userLat, userLng])
+        .addTo(map)
+        .bindPopup("You are here")
+        .openPopup();
+
+      // Remove old route if exists
+      if (routingControl) {
+        map.removeControl(routingControl);
+      }
+
+      // Route
+      routingControl = L.Routing.control({
+        waypoints: [
+          L.latLng(userLat, userLng),
+          L.latLng(STATION.lat, STATION.lng)
+        ],
+        routeWhileDragging: false,
+        addWaypoints: false,
+        draggableWaypoints: false,
+        show: false
+      })
+      .on("routesfound", e => {
+        const distanceKm =
+          (e.routes[0].summary.totalDistance / 1000).toFixed(2);
+
+        document.getElementById("info").innerText =
+          Distance to station: ${distanceKm} km;
+      })
+      .addTo(map);
+
+      map.fitBounds([
+        [userLat, userLng],
+        [STATION.lat, STATION.lng]
+      ]);
+    },
+    error => {
+      document.getElementById("info").innerText =
+        "❌ Location permission denied";
+    },
+    { enableHighAccuracy: true }
+  );
+}
