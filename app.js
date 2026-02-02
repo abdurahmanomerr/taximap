@@ -2,33 +2,34 @@ const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
-const MAPTILER_KEY = "PolsSfZNg49T4lwOFXtb";
+// YOUR STADIA API KEY
+const STADIA_KEY = "a00feb43-6438-468d-91f2-76b7e45cf245";
 
-// Station Location
+// Taxi Station Location
 const STATION = {
   name: "Taxi Station",
   lat: 9.059406,
   lng: 38.737413
 };
 
-// 1. Initialize Map
+// Initialize Map
 const map = L.map("map").setView([STATION.lat, STATION.lng], 15);
 
-// 2. Add MapTiler Hybrid (Satellite + Labels)
-const mtLayer = new L.maptiler.MaptilerLayer({
-  apiKey: MAPTILER_KEY,
-  style: "hybrid", // This gives you Satellite + Streets
+// Add Stadia Alidade Satellite (Hybrid: Satellite + Labels)
+// We use {r} for retina support and add your api_key at the end
+L.tileLayer(`https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.png?api_key=${STADIA_KEY}`, {
+  maxZoom: 20,
+  attribution: '© Stadia Maps, © OpenMapTiles, © OpenStreetMap contributors'
 }).addTo(map);
 
-// 3. Custom Taxi Icon
+// Custom Yellow Taxi Marker
 const taxiIcon = L.divIcon({
-  html: '<div style="font-size: 30px; filter: drop-shadow(0 2px 2px black);">🚕</div>',
-  className: 'custom-div-icon',
+  html: '<div style="font-size: 30px; text-shadow: 0 0 10px #ffd700;">🚕</div>',
+  className: 'custom-taxi',
   iconSize: [30, 30],
   iconAnchor: [15, 15]
 });
 
-// Add Station Marker
 L.marker([STATION.lat, STATION.lng], { icon: taxiIcon })
   .addTo(map)
   .bindPopup(`<b>${STATION.name}</b>`)
@@ -38,27 +39,25 @@ let routingControl;
 
 function getLocation() {
   const statusDiv = document.getElementById("status");
-  statusDiv.innerText = "🛰️ Connecting to GPS...";
+  statusDiv.innerText = "🛰️ LOCATING...";
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
       const userLat = position.coords.latitude;
       const userLng = position.coords.longitude;
 
-      // Add User Marker (Person emoji)
+      // User Marker
       const userIcon = L.divIcon({
         html: '<div style="font-size: 30px;">🚶‍♂️</div>',
         className: 'user-icon',
         iconSize: [30, 30],
         iconAnchor: [15, 15]
       });
-      
       L.marker([userLat, userLng], { icon: userIcon }).addTo(map);
 
-      // Remove old route
       if (routingControl) map.removeControl(routingControl);
 
-      // Draw Route
+      // Routing with Yellow Line to match theme
       routingControl = L.Routing.control({
         waypoints: [
           L.latLng(userLat, userLng),
@@ -68,22 +67,21 @@ function getLocation() {
           serviceUrl: 'https://router.project-osrm.org/route/v1'
         }),
         lineOptions: {
-          styles: [{ color: '#0088cc', weight: 6, opacity: 0.8 }]
+          styles: [{ color: '#ffd700', weight: 7, opacity: 0.9 }] // Yellow route line
         },
         addWaypoints: false,
         show: false
       })
       .on("routesfound", (e) => {
         const dist = (e.routes[0].summary.totalDistance / 1000).toFixed(2);
-        statusDiv.innerHTML = `🏁 Distance: ${dist} km`;
+        statusDiv.innerHTML = `DISTANCE: ${dist} KM`;
       })
       .addTo(map);
 
-      // Fit map to see both points
-      map.fitBounds([[userLat, userLng], [STATION.lat, STATION.lng]], { padding: [80, 80] });
+      map.fitBounds([[userLat, userLng], [STATION.lat, STATION.lng]], { padding: [70, 70] });
     },
     (err) => {
-      statusDiv.innerText = "❌ Please enable Location/GPS";
+      statusDiv.innerText = "❌ GPS ERROR";
       console.error(err);
     },
     { enableHighAccuracy: true }
