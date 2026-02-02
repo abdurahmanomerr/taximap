@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Taxi Station Locator</title>
-  
+  <title>Addisu Gebeya Taxi Hub</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -12,54 +11,61 @@
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
   <style>
-    body { margin: 0; font-family: -apple-system, sans-serif; background-color: #f4f4f4; overflow: hidden; }
+    body { margin: 0; font-family: -apple-system, sans-serif; background-color: #1a1a1a; overflow: hidden; }
     #map { height: 100vh; width: 100%; }
 
-    /* Top Greeting Bar */
     .top-header {
       position: absolute; top: 10px; left: 15px; right: 15px; z-index: 1000;
-      background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px);
-      padding: 12px 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      font-size: 16px; font-weight: bold; color: #333; display: flex; align-items: center; gap: 8px;
+      background: rgba(255, 255, 255, 0.95); padding: 12px 20px; border-radius: 15px;
+      font-size: 16px; font-weight: bold; color: #333; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
 
-    /* Bottom UI Layout */
     .bottom-ui {
       position: absolute; bottom: 30px; left: 15px; right: 15px; z-index: 1000;
-      display: flex; flex-direction: column; gap: 12px;
+      display: flex; flex-direction: column; gap: 10px;
     }
 
     .status-card {
       background: white; padding: 15px; border-radius: 16px; text-align: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15); font-weight: 600; color: #444;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); font-weight: 700; color: #222;
     }
 
-    .button-row { display: flex; gap: 10px; }
+    .button-row { display: flex; gap: 8px; }
 
     button {
-      flex: 1; padding: 18px; border-radius: 14px; border: none;
-      font-size: 16px; font-weight: 800; cursor: pointer; transition: 0.2s;
+      flex: 1; padding: 16px; border-radius: 14px; border: none;
+      font-size: 15px; font-weight: 800; cursor: pointer;
     }
 
-    .btn-locate { background: #fff59d; color: #555; }
-    .btn-go { background: #ffd700; color: #000; }
+    .btn-locate { background: #eee; color: #444; }
+    .btn-go { background: #FFD700; color: #000; }
     
-    button:active { transform: translateY(2px); opacity: 0.9; }
-    button:disabled { background: #e0e0e0; color: #aaa; cursor: not-allowed; }
+    button:active { transform: scale(0.97); }
+    button:disabled { background: #555; color: #888; }
+
+    /* Custom Popup Styling */
+    .dest-popup .leaflet-popup-content-wrapper {
+      background: #000; color: #fff; border: 2px solid #FFD700; border-radius: 12px;
+    }
+    .dest-list { list-style: none; padding: 0; margin: 10px 0 0 0; }
+    .dest-list li { 
+      padding: 8px 0; border-bottom: 1px solid #333; 
+      display: flex; justify-content: space-between; font-size: 13px;
+    }
+    .dest-list li:last-child { border: none; }
+    .dest-tag { color: #FFD700; font-weight: bold; }
   </style>
 </head>
 <body>
 
-  <div class="top-header">
-    👋 Hi <span id="user-name">Guest</span>, finding your taxi...
-  </div>
+  <div class="top-header">👋 Hi <span id="user-name">Driver</span>! Welcome back.</div>
 
   <div id="map"></div>
 
   <div class="bottom-ui">
-    <div class="status-card" id="status">Ready to help! Tap Locate.</div>
+    <div class="status-card" id="status">TAP THE TAXI FOR ROUTES</div>
     <div class="button-row">
-      <button class="btn-locate" onclick="getLocation()">📍 LOCATE</button>
+      <button class="btn-locate" onclick="getLocation()">📍 LOCATE ME</button>
       <button class="btn-go" id="go-btn" onclick="calculateRoute()" disabled>🚀 GO</button>
     </div>
   </div>
