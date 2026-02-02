@@ -6,114 +6,69 @@
   <title>Addis Taxi Hub</title>
   
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
   <style>
-    /* THIS IS THE CSS: It handles the look and feel */
-    body { margin: 0; font-family: sans-serif; background: #1a1a1a; overflow: hidden; }
-    #map { height: 100vh; width: 100%; }
+    /* CSS: The design of your app */
+    body { margin: 0; font-family: -apple-system, sans-serif; background: #1a1a1a; overflow: hidden; }
+    #map { height: 100vh; width: 100%; z-index: 1; }
 
     .top-header {
       position: absolute; top: 10px; left: 15px; right: 15px; z-index: 1000;
-      background: white; padding: 12px; border-radius: 12px; font-weight: bold;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      background: rgba(255, 255, 255, 0.95); padding: 12px 20px; border-radius: 15px;
+      font-size: 16px; font-weight: bold; color: #333; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
 
     .bottom-ui {
-      position: absolute; bottom: 25px; left: 15px; right: 15px; z-index: 1000;
+      position: absolute; bottom: 30px; left: 15px; right: 15px; z-index: 1000;
       display: flex; flex-direction: column; gap: 10px;
     }
 
     .status-card {
-      background: white; padding: 15px; border-radius: 15px; text-align: center;
-      font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      background: white; padding: 15px; border-radius: 16px; text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); font-weight: 700; color: #222;
     }
 
-    .btn-row { display: flex; gap: 10px; }
+    .btn-row { display: flex; gap: 8px; }
     button {
-      flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: 800;
+      flex: 1; padding: 16px; border-radius: 14px; border: none;
+      font-size: 15px; font-weight: 800; cursor: pointer; transition: 0.2s;
     }
-    .btn-go { background: #FFD700; color: black; }
-    .btn-loc { background: #eee; }
-    button:disabled { background: #444; color: #888; }
+
+    .btn-locate { background: #eee; color: #444; }
+    .btn-go { background: #FFD700; color: #000; }
+    
+    button:active { transform: scale(0.97); }
+    button:disabled { background: #555; color: #888; cursor: not-allowed; }
 
     /* Taxi Icon Styling */
     .taxi-icon {
       background: #000; color: #FFD700; border: 2px solid #FFD700;
       border-radius: 50%; width: 35px; height: 35px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; box-shadow: 0 0 10px gold;
+      font-size: 18px; box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
     }
   </style>
 </head>
 <body>
 
-  <div class="top-header">👋 Hi <span id="user-name">Driver</span></div>
+  <div class="top-header">👋 Hi <span id="user-name">User</span></div>
+
   <div id="map"></div>
 
   <div class="bottom-ui">
-    <div class="status-card" id="status">SELECT A STATION ON MAP</div>
+    <div class="status-card" id="status">SELECT A TAXI STATION</div>
     <div class="btn-row">
-      <button class="btn-loc" onclick="getLocation()">📍 MY LOCATION</button>
+      <button class="btn-locate" onclick="getLocation()">📍 MY LOCATION</button>
       <button class="btn-go" id="go-btn" onclick="calculateRoute()" disabled>🚀 START ROUTE</button>
     </div>
   </div>
 
-  <script>
-    /* THIS IS THE JAVASCRIPT: It handles the logic */
-    const STADIA_KEY = "a00feb43-6438-468d-91f2-76b7e45cf245";
-    const STATIONS = [
-      { id: 1, name: "Addisu Gebeya", lat: 9.059406, lng: 38.737413, info: "Piassa, Mexico" },
-      { id: 2, name: "Piassa to Bole", lat: 9.034082, lng: 38.749485, info: "Gemo, Kara, Bole" },
-      { id: 3, name: "Sululta Hub", lat: 9.1764, lng: 38.7513, info: "Sululta to Addis" }
-    ];
-
-    let userLoc = null;
-    let selectedDest = STATIONS[0];
-    let routeLine = null;
-
-    const map = L.map('map', { zoomControl: false, tap: false }).setView([9.03, 38.75], 13);
-    
-    L.tileLayer(`https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}@2x.png?api_key=${STADIA_KEY}`).addTo(map);
-
-    STATIONS.forEach(st => {
-      const icon = L.divIcon({ html: '<div class="taxi-icon">🚕</div>', className: '', iconSize: [35, 35] });
-      L.marker([st.lat, st.lng], { icon }).addTo(map).bindPopup(`
-        <b>${st.name}</b><br>${st.info}<br>
-        <button onclick="setDest(${st.id})" style="background:#FFD700; border:none; margin-top:5px; cursor:pointer;">SELECT</button>
-      `);
-    });
-
-    function setDest(id) {
-      selectedDest = STATIONS.find(s => s.id === id);
-      document.getElementById("status").innerText = "DESTINATION: " + selectedDest.name;
-      map.closePopup();
-    }
-
-    function getLocation() {
-      navigator.geolocation.getCurrentPosition(pos => {
-        userLoc = [pos.coords.latitude, pos.coords.longitude];
-        L.marker(userLoc, { icon: L.divIcon({ html: '👤', iconSize: [25, 25] }) }).addTo(map);
-        map.flyTo(userLoc, 15);
-        document.getElementById("go-btn").disabled = false;
-        document.getElementById("status").innerText = "📍 READY TO GO!";
-      });
-    }
-
-    function calculateRoute() {
-      if (routeLine) map.removeControl(routeLine);
-      routeLine = L.Routing.control({
-        waypoints: [L.latLng(userLoc[0], userLoc[1]), L.latLng(selectedDest.lat, selectedDest.lng)],
-        router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1', profile: 'driving' }),
-        show: false,
-        lineOptions: { styles: [{ color: 'black', weight: 8, opacity: 0.3 }, { color: '#FFD700', weight: 4 }] }
-      }).on('routesfound', e => {
-        const d = (e.routes[0].summary.totalDistance / 1000).toFixed(2);
-        document.getElementById("status").innerHTML = `🏁 <b>${d} KM</b> to ${selectedDest.name}`;
-      }).addTo(map);
-    }
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
