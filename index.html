@@ -4,66 +4,156 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Addisu Gebeya Taxi Hub</title>
+  
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
   <style>
-    body { margin: 0; font-family: -apple-system, sans-serif; background-color: #1a1a1a; overflow: hidden; }
-    #map { height: 100vh; width: 100%; }
-
-    .top-header {
-      position: absolute; top: 10px; left: 15px; right: 15px; z-index: 1000;
-      background: rgba(255, 255, 255, 0.95); padding: 12px 20px; border-radius: 15px;
-      font-size: 16px; font-weight: bold; color: #333; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    /* Professional Mobile-First Styling */
+    body { 
+      margin: 0; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      background-color: #1a1a1a; 
+      overflow: hidden; 
+    }
+    
+    #map { 
+      height: 100vh; 
+      width: 100%; 
     }
 
+    /* Top Greeting Bar */
+    .top-header {
+      position: absolute; 
+      top: 10px; 
+      left: 15px; 
+      right: 15px; 
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.95); 
+      padding: 12px 20px; 
+      border-radius: 15px;
+      font-size: 16px; 
+      font-weight: bold; 
+      color: #333; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Bottom Control Center */
     .bottom-ui {
-      position: absolute; bottom: 30px; left: 15px; right: 15px; z-index: 1000;
-      display: flex; flex-direction: column; gap: 10px;
+      position: absolute; 
+      bottom: 30px; 
+      left: 15px; 
+      right: 15px; 
+      z-index: 1000;
+      display: flex; 
+      flex-direction: column; 
+      gap: 10px;
     }
 
     .status-card {
-      background: white; padding: 15px; border-radius: 16px; text-align: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3); font-weight: 700; color: #222;
+      background: white; 
+      padding: 15px; 
+      border-radius: 16px; 
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
+      font-weight: 700; 
+      color: #1a1a1a;
+      border: 1px solid #ddd;
     }
 
-    .button-row { display: flex; gap: 8px; }
+    .button-row { 
+      display: flex; 
+      gap: 8px; 
+    }
 
     button {
-      flex: 1; padding: 16px; border-radius: 14px; border: none;
-      font-size: 15px; font-weight: 800; cursor: pointer;
+      flex: 1; 
+      padding: 18px; 
+      border-radius: 14px; 
+      border: none;
+      font-size: 15px; 
+      font-weight: 800; 
+      cursor: pointer;
+      transition: transform 0.1s ease;
     }
 
-    .btn-locate { background: #eee; color: #444; }
-    .btn-go { background: #FFD700; color: #000; }
+    .btn-locate { 
+      background: #f0f0f0; 
+      color: #444; 
+    }
     
-    button:active { transform: scale(0.97); }
-    button:disabled { background: #555; color: #888; }
+    .btn-go { 
+      background: #FFD700; 
+      color: #000; 
+      box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+    }
 
-    /* Custom Popup Styling */
+    button:active { 
+      transform: scale(0.96); 
+    }
+    
+    button:disabled { 
+      background: #555; 
+      color: #888; 
+      box-shadow: none;
+    }
+
+    /* Taxi Station Info Popup Styling */
     .dest-popup .leaflet-popup-content-wrapper {
-      background: #000; color: #fff; border: 2px solid #FFD700; border-radius: 12px;
+      background: #000; 
+      color: #fff; 
+      border: 2px solid #FFD700; 
+      border-radius: 12px;
+      padding: 5px;
     }
-    .dest-list { list-style: none; padding: 0; margin: 10px 0 0 0; }
+    
+    .dest-popup .leaflet-popup-tip {
+      background: #FFD700;
+    }
+
+    .dest-list { 
+      list-style: none; 
+      padding: 0; 
+      margin: 10px 0 0 0; 
+    }
+    
     .dest-list li { 
-      padding: 8px 0; border-bottom: 1px solid #333; 
-      display: flex; justify-content: space-between; font-size: 13px;
+      padding: 8px 0; 
+      border-bottom: 1px solid #333; 
+      display: flex; 
+      justify-content: space-between; 
+      font-size: 13px;
     }
-    .dest-list li:last-child { border: none; }
-    .dest-tag { color: #FFD700; font-weight: bold; }
+    
+    .dest-list li:last-child { 
+      border: none; 
+    }
+    
+    .dest-tag { 
+      color: #FFD700; 
+      font-weight: bold; 
+      font-size: 10px;
+      letter-spacing: 1px;
+    }
   </style>
 </head>
 <body>
 
-  <div class="top-header">👋 Hi <span id="user-name">Driver</span>! Welcome back.</div>
+  <div class="top-header">
+    <span>👋</span> Hi <span id="user-name">Driver</span>! Ready to go?
+  </div>
 
   <div id="map"></div>
 
   <div class="bottom-ui">
-    <div class="status-card" id="status">TAP THE TAXI FOR ROUTES</div>
+    <div class="status-card" id="status">TAP THE TAXI FOR DESTINATIONS</div>
     <div class="button-row">
       <button class="btn-locate" onclick="getLocation()">📍 LOCATE ME</button>
       <button class="btn-go" id="go-btn" onclick="calculateRoute()" disabled>🚀 GO</button>
