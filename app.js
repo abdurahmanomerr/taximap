@@ -2,65 +2,72 @@ const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
+// Set Username from Telegram
 const userName = tg.initDataUnsafe?.user?.first_name || "Driver";
 document.getElementById("user-name").innerText = userName;
 
 const STADIA_KEY = "a00feb43-6438-468d-91f2-76b7e45cf245";
-const STATION = { lat: 9.059406, lng: 38.737413, name: "Addisu Gebeya Station" };
+
+// NEW: Station List (Updated locations)
+const STATIONS = [
+    { id: 1, name: "Addisu Gebeya", lat: 9.059406, lng: 38.737413, info: "Piassa, Mexico, Shiro Meda" },
+    { id: 2, name: "Piassa to Bole", lat: 9.034082, lng: 38.749485, info: "Bole, Gemo, Kara" },
+    { id: 3, name: "Sululta Hub", lat: 9.123456, lng: 38.750000, info: "Sululta to Addis Ababa" }
+];
+
+let selectedStation = STATIONS[0]; 
 let userLocation = null;
 let routingControl = null;
 
-// Initialize Map
+// ZOOM FIX: tap: false prevents mobile zoom conflicts
 const map = L.map("map", { 
-    zoomControl: false,
-    tap: true // Ensures better mobile response
-}).setView([STATION.lat, STATION.lng], 16);
+    zoomControl: false, 
+    tap: false,        
+    dragging: true,
+    touchZoom: true,
+    scrollWheelZoom: true
+}).setView([selectedStation.lat, selectedStation.lng], 14);
 
-// HIGH-DETAIL "OSM BRIGHT" STYLE
 L.tileLayer(`https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}@2x.png?api_key=${STADIA_KEY}`, {
     maxZoom: 20,
-    minZoom: 13,
-    attribution: '© Stadia Maps',
-    // These two lines force higher detail/smaller labels
-    zoomOffset: -1,
-    tileSize: 512
+    minZoom: 2,
+    attribution: '© Stadia Maps'
 }).addTo(map);
 
-// --- 🚕 STATION MARKER ---
-const stationIcon = L.divIcon({
-    html: '<div style="background:#000; color:#FFD700; border:3px solid #FFD700; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);">🚕</div>',
-    className: 'taxi-hub', iconSize: [40, 40], iconAnchor: [20, 20]
+// Add Station Markers
+STATIONS.forEach(st => {
+    const icon = L.divIcon({
+        html: `<div class="taxi-icon">🚕</div>`,
+        className: 'custom-div-icon', iconSize: [40, 40], iconAnchor: [20, 20]
+    });
+
+    const marker = L.marker([st.lat, st.lng], { icon: icon }).addTo(map);
+    
+    marker.bindPopup(`
+        <div style="text-align:center; font-family: sans-serif;">
+            <strong style="color:#000;">${st.name}</strong><br>
+            <span style="font-size:12px; color:#666;">Routes: ${st.info}</span><br>
+            <button onclick="selectStation(${st.id})" style="margin-top:10px; padding:8px; background:#FFD700; border:none; border-radius:8px; font-weight:bold; width:100%; cursor:pointer;">SELECT HUB</button>
+        </div>
+    `);
 });
 
-const infoContent = `
-    <div style="text-align:center;">
-        <strong style="color:#FFD700; font-size:16px;">${STATION.name}</strong>
-        <ul class="dest-list">
-            <li><span>📍 Piassa</span> <span class="dest-tag">ACTIVE</span></li>
-            <li><span>📍 Gojam Berenda</span> <span class="dest-tag">ACTIVE</span></li>
-            <li><span>📍 Mexico</span> <span class="dest-tag">ACTIVE</span></li>
-            <li><span>📍 Shiro Meda</span> <span class="dest-tag">ACTIVE</span></li>
-        </ul>
-        <p style="font-size:10px; margin-top:8px; color:#888;">Tap "GO" for shortest route</p>
-    </div>
-`;
-
-L.marker([STATION.lat, STATION.lng], { icon: stationIcon })
-    .addTo(map)
-    .bindPopup(infoContent, { className: 'dest-popup', minWidth: 200 });
+function selectStation(id) {
+    selectedStation = STATIONS.find(s => s.id === id);
+    document.getElementById("status").innerHTML = `HUB: <b>${selectedStation.name}</b>`;
+    map.closePopup();
+}
 
 function getLocation() {
     const status = document.getElementById("status");
-    status.innerText = "🛰️ PINPOINTING...";
+    status.innerText = "🛰️ SEARCHING GPS...";
     
     navigator.geolocation.getCurrentPosition(
         (pos) => {
             userLocation = [pos.coords.latitude, pos.coords.longitude];
-            L.marker(userLocation, { 
-                icon: L.divIcon({ html: '<div style="font-size:30px;">👤</div>', iconSize:[30,30], iconAnchor:[15,15] }) 
-            }).addTo(map);
-            map.flyTo(userLocation, 17); // Zoomed in more for better street detail
-            status.innerText = "📍 LOCATION SET. PRESS GO!";
+            L.marker(userLocation, { icon: L.divIcon({ html: '👤', iconSize:[30,30] }) }).addTo(map);
+            map.flyTo(userLocation, 16);
+            status.innerText = "📍 LOCATION FOUND!";
             document.getElementById("go-btn").disabled = false;
         },
         () => { status.innerText = "❌ GPS DENIED"; },
@@ -71,21 +78,27 @@ function getLocation() {
 function calculateRoute() {
     if (!userLocation) return;
     const status = document.getElementById("status");
-    status.innerText = "📐 MAPPING BEST PATH...";
+    status.innerText = "📐 FINDING BEST ROUTE...";
 
     if (routingControl) map.removeControl(routingControl);
 
     routingControl = L.Routing.control({
-        waypoints: [L.latLng(userLocation[0], userLocation[1]), L.latLng(STATION.lat, STATION.lng)],
-        router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
-        lineOptions: { styles: [{ color: '#000', weight: 8, opacity: 0.4 }, { color: '#FFD700', weight: 4 }] },
+        waypoints: [
+            L.latLng(userLocation[0], userLocation[1]), 
+            L.latLng(selectedStation.lat, selectedStation.lng)
+        ],
+        router: L.Routing.osrmv1({ 
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            profile: 'driving' 
+        }),
+        lineOptions: { styles: [{ color: '#000', weight: 8, opacity: 0.3 }, { color: '#FFD700', weight: 4 }] },
         addWaypoints: false, 
         show: false,
         createMarker: function() { return null; }
     }).on("routesfound", (e) => {
         const dist = (e.routes[0].summary.totalDistance / 1000).toFixed(2);
-        status.innerHTML = `🏆 STATION IS <b>${dist} KM</b> AWAY`;
+        status.innerHTML = `🏁 <b>${dist} KM</b> to ${selectedStation.name}`;
     }).addTo(map);
 
-    map.fitBounds([userLocation, [STATION.lat, STATION.lng]], { padding: [80, 80] });
+    map.fitBounds([userLocation, [selectedStation.lat, selectedStation.lng]], { padding: [80, 80] });
 }
