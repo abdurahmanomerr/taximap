@@ -1,24 +1,35 @@
 const tg = window.Telegram.WebApp;
 tg.ready();
-tg.expand(); // Good practice to expand the app for maps
+tg.expand();
 
-// Fixed station location
+const MAPTILER_KEY = "PolsSfZNg49T4lwOFXtb";
+
+// Station Location
 const STATION = {
   name: "Taxi Station",
   lat: 9.059406,
   lng: 38.737413
 };
 
-// Init map
-const map = L.map("map").setView([STATION.lat, STATION.lng], 14);
+// 1. Initialize Map
+const map = L.map("map").setView([STATION.lat, STATION.lng], 15);
 
-// Map tiles
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "© OpenStreetMap"
+// 2. Add MapTiler Hybrid (Satellite + Labels)
+const mtLayer = new L.maptiler.MaptilerLayer({
+  apiKey: MAPTILER_KEY,
+  style: "hybrid", // This gives you Satellite + Streets
 }).addTo(map);
 
-// Station marker
-L.marker([STATION.lat, STATION.lng])
+// 3. Custom Taxi Icon
+const taxiIcon = L.divIcon({
+  html: '<div style="font-size: 30px; filter: drop-shadow(0 2px 2px black);">🚕</div>',
+  className: 'custom-div-icon',
+  iconSize: [30, 30],
+  iconAnchor: [15, 15]
+});
+
+// Add Station Marker
+L.marker([STATION.lat, STATION.lng], { icon: taxiIcon })
   .addTo(map)
   .bindPopup(`<b>${STATION.name}</b>`)
   .openPopup();
@@ -26,66 +37,55 @@ L.marker([STATION.lat, STATION.lng])
 let routingControl;
 
 function getLocation() {
-  const infoBox = document.getElementById("info");
-  infoBox.innerHTML = "<span>Searching... 🛰️</span>";
+  const statusDiv = document.getElementById("status");
+  statusDiv.innerText = "🛰️ Connecting to GPS...";
 
-  // Use the browser Geolocation API
   navigator.geolocation.getCurrentPosition(
     (position) => {
       const userLat = position.coords.latitude;
       const userLng = position.coords.longitude;
 
-      // Add user marker
-      L.marker([userLat, userLng])
-        .addTo(map)
-        .bindPopup("You are here")
-        .openPopup();
+      // Add User Marker (Person emoji)
+      const userIcon = L.divIcon({
+        html: '<div style="font-size: 30px;">🚶‍♂️</div>',
+        className: 'user-icon',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
+      
+      L.marker([userLat, userLng], { icon: userIcon }).addTo(map);
 
-      // Clear existing route
-      if (routingControl) {
-        map.removeControl(routingControl);
-      }
+      // Remove old route
+      if (routingControl) map.removeControl(routingControl);
 
-      // Create new route using secure HTTPS server
+      // Draw Route
       routingControl = L.Routing.control({
         waypoints: [
           L.latLng(userLat, userLng),
           L.latLng(STATION.lat, STATION.lng)
         ],
         router: L.Routing.osrmv1({
-          serviceUrl: 'https://router.project-osrm.org/route/v1' // Force HTTPS
+          serviceUrl: 'https://router.project-osrm.org/route/v1'
         }),
-        routeWhileDragging: false,
+        lineOptions: {
+          styles: [{ color: '#0088cc', weight: 6, opacity: 0.8 }]
+        },
         addWaypoints: false,
         show: false
       })
       .on("routesfound", (e) => {
-        const distanceKm = (e.routes[0].summary.totalDistance / 1000).toFixed(2);
-        infoBox.innerHTML = `<b>Distance:</b> ${distanceKm} km`;
-      })
-      .on("routingerror", () => {
-        infoBox.innerHTML = "❌ Route calculation failed";
+        const dist = (e.routes[0].summary.totalDistance / 1000).toFixed(2);
+        statusDiv.innerHTML = `🏁 Distance: ${dist} km`;
       })
       .addTo(map);
 
-      // Zoom map to show both points
-      map.fitBounds([
-        [userLat, userLng],
-        [STATION.lat, STATION.lng]
-      ], { padding: [50, 50] });
+      // Fit map to see both points
+      map.fitBounds([[userLat, userLng], [STATION.lat, STATION.lng]], { padding: [80, 80] });
     },
-    (error) => {
-      // Handle location errors
-      console.error(error);
-      if (error.code === 1) {
-        infoBox.innerHTML = "❌ Please allow location access";
-      } else {
-        infoBox.innerHTML = "❌ Location unavailable";
-      }
+    (err) => {
+      statusDiv.innerText = "❌ Please enable Location/GPS";
+      console.error(err);
     },
-    { 
-        enableHighAccuracy: true,
-        timeout: 10000 
-    }
+    { enableHighAccuracy: true }
   );
 }
