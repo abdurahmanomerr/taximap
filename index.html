@@ -10,331 +10,57 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-  
-  <!-- Add Font Awesome for icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
   <style>
-    :root {
-      --primary-yellow: #FFD700;
-      --primary-black: #1a1a1a;
-      --card-bg: rgba(255, 255, 255, 0.95);
-      --text-dark: #222;
-      --text-light: #666;
-      --success: #28a745;
-      --danger: #dc3545;
-    }
-    
-    body { 
-      margin: 0; 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
-      background: var(--primary-black); 
-      overflow: hidden; 
-    }
-    #map { 
-      height: 100vh; 
-      width: 100%; 
-      z-index: 1; 
-    }
+    body { margin: 0; font-family: -apple-system, sans-serif; background: #1a1a1a; overflow: hidden; }
+    #map { height: 100vh; width: 100%; z-index: 1; }
 
     .top-header {
-      position: absolute; 
-      top: 10px; 
-      left: 15px; 
-      right: 15px; 
-      z-index: 1000;
-      background: var(--card-bg); 
-      padding: 12px 20px; 
-      border-radius: 15px;
-      font-size: 16px; 
-      font-weight: bold; 
-      color: var(--text-dark); 
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .user-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: var(--primary-yellow);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: var(--primary-black);
-    }
-
-    .station-selector {
-      position: absolute;
-      top: 80px;
-      left: 15px;
-      right: 15px;
-      z-index: 1000;
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      display: none;
-    }
-
-    .station-item {
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .station-item:hover {
-      background: #f5f5f5;
-    }
-
-    .station-item.active {
-      background: rgba(255, 215, 0, 0.1);
-      border-left: 3px solid var(--primary-yellow);
-    }
-
-    .station-name {
-      font-weight: bold;
-      color: var(--text-dark);
-    }
-
-    .station-info {
-      font-size: 12px;
-      color: var(--text-light);
-      margin-top: 4px;
+      position: absolute; top: 10px; left: 15px; right: 15px; z-index: 1000;
+      background: rgba(255, 255, 255, 0.95); padding: 12px 20px; border-radius: 15px;
+      font-size: 16px; font-weight: bold; color: #333; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
 
     .bottom-ui {
-      position: absolute; 
-      bottom: 30px; 
-      left: 15px; 
-      right: 15px; 
-      z-index: 1000;
-      display: flex; 
-      flex-direction: column; 
-      gap: 10px;
+      position: absolute; bottom: 30px; left: 15px; right: 15px; z-index: 1000;
+      display: flex; flex-direction: column; gap: 10px;
     }
 
     .status-card {
-      background: var(--card-bg); 
-      padding: 15px; 
-      border-radius: 16px; 
-      text-align: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
-      font-weight: 700; 
-      color: var(--text-dark);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: white; padding: 15px; border-radius: 16px; text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); font-weight: 700; color: #222;
     }
 
-    .route-info {
-      text-align: left;
-    }
-
-    .distance-badge {
-      background: var(--primary-yellow);
-      padding: 4px 8px;
-      border-radius: 10px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-
-    .btn-row { 
-      display: flex; 
-      gap: 8px; 
-    }
-    
+    .btn-row { display: flex; gap: 8px; }
     button {
-      flex: 1; 
-      padding: 16px; 
-      border-radius: 14px; 
-      border: none;
-      font-size: 15px; 
-      font-weight: 800; 
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      flex: 1; padding: 16px; border-radius: 14px; border: none;
+      font-size: 15px; font-weight: 800; cursor: pointer;
     }
 
-    .btn-locate { 
-      background: #f0f0f0; 
-      color: #444; 
-    }
+    .btn-locate { background: #eee; color: #444; }
+    .btn-go { background: #FFD700; color: #000; }
     
-    .btn-go { 
-      background: var(--primary-yellow); 
-      color: #000; 
-    }
-    
-    .btn-secondary {
-      background: #333;
-      color: white;
-    }
-    
-    button:active { 
-      transform: scale(0.97); 
-    }
-    
-    button:disabled { 
-      background: #555; 
-      color: #888; 
-      cursor: not-allowed; 
-    }
+    button:active { transform: scale(0.97); }
+    button:disabled { background: #555; color: #888; cursor: not-allowed; }
 
     .taxi-icon {
-      background: #000; 
-      color: var(--primary-yellow); 
-      border: 2px solid var(--primary-yellow);
-      border-radius: 50%; 
-      width: 40px; 
-      height: 40px;
-      display: flex; 
-      align-items: center; 
-      justify-content: center;
-      font-size: 20px; 
-      box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
-    }
-
-    .user-marker {
-      background: #007bff;
-      color: white;
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      border: 3px solid white;
-      box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
-    }
-
-    .instructions-panel {
-      position: absolute;
-      top: 50%;
-      right: 15px;
-      transform: translateY(-50%);
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 15px;
-      max-height: 60vh;
-      overflow-y: auto;
-      width: 280px;
-      display: none;
-      z-index: 1000;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    }
-
-    .instruction-item {
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-
-    .instruction-icon {
-      color: var(--primary-yellow);
-      font-size: 14px;
-      min-width: 20px;
-    }
-
-    .close-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      color: var(--text-light);
-    }
-
-    .loader {
-      display: none;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 1001;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
+      background: #000; color: #FFD700; border: 2px solid #FFD700;
+      border-radius: 50%; width: 35px; height: 35px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
     }
   </style>
 </head>
 <body>
-  <div class="top-header">
-    <div class="user-info">
-      <div class="user-avatar" id="user-avatar">D</div>
-      <span>Welcome, <span id="user-name">Driver</span></span>
-    </div>
-    <button class="btn-secondary" onclick="toggleStations()" style="padding: 8px 12px; font-size: 14px;">
-      <i class="fas fa-map-marker-alt"></i> Change Hub
-    </button>
-  </div>
-
-  <div class="station-selector" id="station-selector">
-    <h3 style="margin: 0 0 10px 0; color: var(--text-dark);">Select Taxi Hub</h3>
-    <div id="station-list"></div>
-  </div>
-
-  <div class="instructions-panel" id="instructions-panel">
-    <button class="close-btn" onclick="toggleInstructions()">&times;</button>
-    <h3 style="margin-top: 0;">Route Instructions</h3>
-    <div id="instructions-list"></div>
-  </div>
-
-  <div class="loader" id="loader">
-    <i class="fas fa-spinner fa-spin fa-2x"></i>
-    <p>Calculating best route...</p>
-  </div>
-
+  <div class="top-header">👋 Hi <span id="user-name">User</span></div>
   <div id="map"></div>
-  
   <div class="bottom-ui">
-    <div class="status-card" id="status">
-      <div class="route-info">
-        <div id="current-hub">SELECT A TAXI HUB</div>
-        <div id="distance-info" style="font-size: 12px; color: var(--text-light); font-weight: normal;"></div>
-      </div>
-      <div id="distance-badge" class="distance-badge" style="display: none;"></div>
-    </div>
-    
+    <div class="status-card" id="status">SELECT A TAXI STATION</div>
     <div class="btn-row">
-      <button class="btn-locate" onclick="getLocation()">
-        <i class="fas fa-location-arrow"></i> MY LOCATION
-      </button>
-      <button class="btn-go" id="go-btn" onclick="calculateRoute()" disabled>
-        <i class="fas fa-route"></i> START ROUTE
-      </button>
-    </div>
-    
-    <div class="btn-row">
-      <button class="btn-secondary" onclick="toggleInstructions()" id="instructions-btn" disabled>
-        <i class="fas fa-list-ol"></i> INSTRUCTIONS
-      </button>
-      <button class="btn-secondary" onclick="clearRoute()" id="clear-btn" disabled>
-        <i class="fas fa-times"></i> CLEAR
-      </button>
+      <button class="btn-locate" onclick="getLocation()">📍 MY LOCATION</button>
+      <button class="btn-go" id="go-btn" onclick="calculateRoute()" disabled>🚀 START ROUTE</button>
     </div>
   </div>
-  
   <script src="app.js"></script>
 </body>
 </html>
