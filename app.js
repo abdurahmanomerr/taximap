@@ -2,88 +2,79 @@ const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
-// YOUR STADIA API KEY
 const STADIA_KEY = "a00feb43-6438-468d-91f2-76b7e45cf245";
+const STATION = { lat: 9.059406, lng: 38.737413, name: "Yellow Cab Station" };
+let userLocation = null;
+let routingControl = null;
 
-// Taxi Station Location
-const STATION = {
-  name: "Taxi Station",
-  lat: 9.059406,
-  lng: 38.737413
-};
+// 1. Setup Map with Normal (Smooth) Tiles
+const map = L.map("map", { zoomControl: false }).setView([STATION.lat, STATION.lng], 15);
 
-// Initialize Map
-const map = L.map("map").setView([STATION.lat, STATION.lng], 15);
-
-// Add Stadia Alidade Satellite (Hybrid: Satellite + Labels)
-// We use {r} for retina support and add your api_key at the end
-L.tileLayer(`https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.png?api_key=${STADIA_KEY}`, {
-  maxZoom: 20,
-  attribution: '© Stadia Maps, © OpenMapTiles, © OpenStreetMap contributors'
+L.tileLayer(`https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${STADIA_KEY}`, {
+  attribution: '© Stadia Maps, © OpenStreetMap'
 }).addTo(map);
 
-// Custom Yellow Taxi Marker
-const taxiIcon = L.divIcon({
-  html: '<div style="font-size: 30px; text-shadow: 0 0 10px #ffd700;">🚕</div>',
-  className: 'custom-taxi',
-  iconSize: [30, 30],
-  iconAnchor: [15, 15]
+// 2. Custom Station Marker (New Design)
+const stationIcon = L.divIcon({
+  html: '<div style="background:#000; color:#ffd700; padding:5px; border-radius:50%; border:2px solid #ffd700; font-size:20px; width:30px; height:30px; display:flex; align-items:center; justify-content:center;">🚕</div>',
+  className: 'station-marker',
+  iconSize: [40, 40],
+  iconAnchor: [20, 20]
 });
 
-L.marker([STATION.lat, STATION.lng], { icon: taxiIcon })
+L.marker([STATION.lat, STATION.lng], { icon: stationIcon })
   .addTo(map)
-  .bindPopup(`<b>${STATION.name}</b>`)
-  .openPopup();
+  .bindPopup(`<b>${STATION.name}</b>`);
 
-let routingControl;
-
+// 3. Find User
 function getLocation() {
-  const statusDiv = document.getElementById("status");
-  statusDiv.innerText = "🛰️ LOCATING...";
-
+  const status = document.getElementById("status");
+  status.innerText = "📡 SEARCHING FOR GPS...";
+  
   navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const userLat = position.coords.latitude;
-      const userLng = position.coords.longitude;
+    (pos) => {
+      userLocation = [pos.coords.latitude, pos.coords.longitude];
+      
+      // Add or move user marker
+      L.marker(userLocation, {
+        icon: L.divIcon({ html: '👤', className: 'u-icon', iconSize: [30,30] })
+      }).addTo(map);
 
-      // User Marker
-      const userIcon = L.divIcon({
-        html: '<div style="font-size: 30px;">🚶‍♂️</div>',
-        className: 'user-icon',
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
-      });
-      L.marker([userLat, userLng], { icon: userIcon }).addTo(map);
-
-      if (routingControl) map.removeControl(routingControl);
-
-      // Routing with Yellow Line to match theme
-      routingControl = L.Routing.control({
-        waypoints: [
-          L.latLng(userLat, userLng),
-          L.latLng(STATION.lat, STATION.lng)
-        ],
-        router: L.Routing.osrmv1({
-          serviceUrl: 'https://router.project-osrm.org/route/v1'
-        }),
-        lineOptions: {
-          styles: [{ color: '#ffd700', weight: 7, opacity: 0.9 }] // Yellow route line
-        },
-        addWaypoints: false,
-        show: false
-      })
-      .on("routesfound", (e) => {
-        const dist = (e.routes[0].summary.totalDistance / 1000).toFixed(2);
-        statusDiv.innerHTML = `DISTANCE: ${dist} KM`;
-      })
-      .addTo(map);
-
-      map.fitBounds([[userLat, userLng], [STATION.lat, STATION.lng]], { padding: [70, 70] });
+      map.flyTo(userLocation, 16);
+      status.innerText = "📍 LOCATION FOUND! TAP GO";
+      document.getElementById("go-btn").disabled = false; // Enable GO button
     },
-    (err) => {
-      statusDiv.innerText = "❌ GPS ERROR";
-      console.error(err);
-    },
+    () => { status.innerText = "❌ GPS DENIED"; },
     { enableHighAccuracy: true }
   );
+}
+
+// 4. Calculate Distance & Route (The GO Feature)
+function calculateRoute() {
+  if (!userLocation) return;
+  
+  const status = document.getElementById("status");
+  status.innerText = "🏁 CALCULATING ROUTE...";
+
+  if (routingControl) map.removeControl(routingControl);
+
+  routingControl = L.Routing.control({
+    waypoints: [
+      L.latLng(userLocation[0], userLocation[1]),
+      L.latLng(STATION.lat, STATION.lng)
+    ],
+    router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
+    lineOptions: { styles: [{ color: '#000', weight: 4, opacity: 0.7 }, { color: '#ffd700', weight: 2 }] },
+    addWaypoints: false,
+    show: false
+  })
+  .on("routesfound", (e) => {
+    const route = e.routes[0];
+    const dist = (route.summary.totalDistance / 1000).toFixed(2);
+    const time = Math.round(route.summary.totalTime / 60);
+    status.innerHTML = `📏 ${dist} km | 🕒 ${time} min`;
+  })
+  .addTo(map);
+
+  map.fitBounds([userLocation, [STATION.lat, STATION.lng]], { padding: [100, 100] });
 }
