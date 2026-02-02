@@ -1,46 +1,67 @@
 const tg = window.Telegram.WebApp;
-tg.expand(); // Make Mini App full screen
+tg.ready();
 
-// Center map near the station
-const map = L.map('map').setView([9.060429, 38.729736], 14);
+// Station location (FIXED)
+const STATION = {
+  name: "Station",
+  lat: 9.059406,
+  lng: 38.737413
+};
 
-// Add OpenStreetMap tiles
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
+// Init map (temporary center)
+const map = L.map("map").setView([STATION.lat, STATION.lng], 13);
+
+// Tiles
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "© OpenStreetMap"
 }).addTo(map);
 
-// Add the station marker
-const station = { name: "My Station", lat: 9.060429, lng: 38.729736 };
-L.marker([station.lat, station.lng])
+// Station marker
+L.marker([STATION.lat, STATION.lng])
   .addTo(map)
-  .bindPopup(station.name)
-  .openPopup();
+  .bindPopup(<b>${STATION.name}</b>);
 
-// Get user's location
-map.locate({ setView: true, maxZoom: 16 });
+// Get user location
+navigator.geolocation.getCurrentPosition(
+  position => {
+    const userLat = position.coords.latitude;
+    const userLng = position.coords.longitude;
 
-map.on('locationfound', e => {
-  const userLatLng = [e.latitude, e.longitude];
+    // User marker
+    L.marker([userLat, userLng])
+      .addTo(map)
+      .bindPopup("You are here")
+      .openPopup();
 
-  // Marker for user
-  L.marker(userLatLng).addTo(map)
-    .bindPopup("You are here").openPopup();
+    // Routing
+    L.Routing.control({
+      waypoints: [
+        L.latLng(userLat, userLng),
+        L.latLng(STATION.lat, STATION.lng)
+      ],
+      routeWhileDragging: false,
+      addWaypoints: false,
+      draggableWaypoints: false,
+      show: false
+    })
+    .on("routesfound", function (e) {
+      const route = e.routes[0];
+      const distanceKm = (route.summary.totalDistance / 1000).toFixed(2);
+      document.getElementById("distance").innerText =
+        Distance to station: ${distanceKm} km;
+    })
+    .addTo(map);
 
-  // Distance in meters
-  const distance = map.distance(userLatLng, [station.lat, station.lng]);
-  alert(`Distance to ${station.name}: ${distance.toFixed(0)} meters`);
-
-  // Draw shortest route
-  L.Routing.control({
-    waypoints: [
-      L.latLng(e.latitude, e.longitude),
-      L.latLng(station.lat, station.lng)
-    ],
-    routeWhileDragging: false,
-    show: false
-  }).addTo(map);
-});
-
-map.on('locationerror', err => {
-  alert("Cannot access your location. Please allow location access.");
-});
+    map.fitBounds([
+      [userLat, userLng],
+      [STATION.lat, STATION.lng]
+    ]);
+  },
+  error => {
+    document.getElementById("distance").innerText =
+      "Location access denied";
+  },
+  {
+    enableHighAccuracy: true
+  }
+);
